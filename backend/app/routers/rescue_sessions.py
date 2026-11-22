@@ -28,12 +28,12 @@ router = APIRouter(prefix="/rescue-sessions", tags=["rescue-sessions"])
 CODE_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 ROLE_REQUIREMENTS: dict[str, set[str]] = {
-    "donationCreated": {"donor"},
-    "donationAccepted": {"ngo"},
-    "volunteerAssigned": {"volunteer", "ngo"},
-    "pickupStatusChanged": {"volunteer", "ngo"},
-    "handoverVerified": {"donor", "ngo", "volunteer"},
-    "participantJoined": {"donor", "ngo", "volunteer"},
+    "donationCreated": {"donor", "admin"},
+    "donationAccepted": {"ngo", "admin"},
+    "volunteerAssigned": {"volunteer", "ngo", "admin"},
+    "pickupStatusChanged": {"volunteer", "ngo", "admin"},
+    "handoverVerified": {"donor", "ngo", "volunteer", "admin"},
+    "participantJoined": {"donor", "ngo", "volunteer", "admin"},
 }
 
 
@@ -83,11 +83,11 @@ async def create_session(
     db: DbSession,
     user: CurrentUser,
 ) -> RescueSessionOut:
-    """Launch a live rescue session for a listing owned by the donor."""
+    """Launch a live rescue session for a listing owned by the donor or admin."""
     role = user.role.strip().lower()
-    if role != "donor":
+    if role not in {"donor", "admin"}:
         raise HTTPException(
-            status_code=403, detail="Only donors can launch a rescue session."
+            status_code=403, detail="Only donors or platform admins can launch a rescue session."
         )
 
     listing = await db.get(FoodListing, payload.food_listing_id)
@@ -96,10 +96,10 @@ async def create_session(
             status_code=404,
             detail=f"Food listing {payload.food_listing_id} not found.",
         )
-    if listing.donor_user_id != user.id:
+    if role != "admin" and listing.donor_user_id != user.id:
         raise HTTPException(
             status_code=403,
-            detail="Only the listing donor can launch a rescue session.",
+            detail="Only the listing donor or platform admin can launch a rescue session.",
         )
 
     now = utcnow()

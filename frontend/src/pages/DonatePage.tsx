@@ -21,7 +21,8 @@ export const DonatePage: React.FC = () => {
       setExtraction(null);
       showToast('Surplus food posted! Recipient NGOs have been notified.', 'success');
     } catch (err: any) {
-      showToast(err?.message || 'Could not post listing. Please sign in as a donor.', 'error');
+      const msg = err?.response?.data?.detail || err?.message || 'Could not post listing. Please sign in as a donor.';
+      showToast(msg, 'error');
     }
   };
 

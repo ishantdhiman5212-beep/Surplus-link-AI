@@ -56,12 +56,12 @@ async def create_listing(
     db: DbSession,
     user: CurrentUser,
 ) -> FoodListingOut:
-    """Create a donation listing. Only donors may create listings."""
+    """Create a donation listing. Donors and platform admins may create listings."""
     role = _normalize_role(user.role)
-    if role != "donor":
+    if role not in {"donor", "admin"}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only donors can create listings.",
+            detail="Only food donors or platform admins can create listings.",
         )
 
     now = utcnow()
@@ -79,7 +79,14 @@ async def create_listing(
 
     organisation = None
     organisation_id = payload.organisation_id or user.organisation_id
-    if organisation_id:
+    if not organisation_id:
+        donor_org = await db.scalar(
+            select(Organisation).where(Organisation.type == "donor").order_by(Organisation.id.asc()).limit(1)
+        )
+        if donor_org:
+            organisation = donor_org
+            organisation_id = donor_org.id
+    elif organisation_id:
         organisation = await db.get(Organisation, organisation_id)
 
     listing = FoodListing(
@@ -153,28 +160,28 @@ async def update_listing(
         field in changes and changes[field] != getattr(listing, field)
         for field in CONTENT_FIELDS
     )
-    if content_modified and (role != "donor" or listing.donor_user_id != user.id):
+    if content_modified and (role not in {"donor", "admin"} or (role == "donor" and listing.donor_user_id != user.id)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the original donor can modify listing details.",
+            detail="Only the original donor or platform admin can modify listing details.",
         )
 
     new_status = changes.get("status")
     if new_status is not None:
         normalized_status = new_status.strip().lower()
         if normalized_status != listing.status:
-            if normalized_status == "accepted" and role != "ngo":
+            if normalized_status == "accepted" and role not in {"ngo", "admin"}:
                 raise HTTPException(
-                    status_code=403, detail="Only NGOs can accept donation listings."
+                    status_code=403, detail="Only NGOs or platform admins can accept donation listings."
                 )
             if (
                 normalized_status in {"pickup_assigned", "collected", "in_transit"}
-                and role not in {"volunteer", "ngo"}
+                and role not in {"volunteer", "ngo", "admin"}
             ):
                 raise HTTPException(
                     status_code=403,
                     detail=(
-                        "Only volunteers or recipient NGOs can update pickup status "
+                        "Only volunteers, recipient NGOs, or platform admins can update pickup status "
                         f"to {normalized_status}."
                     ),
                 )
@@ -182,17 +189,18 @@ async def update_listing(
                 "donor",
                 "ngo",
                 "volunteer",
+                "admin",
             }:
                 raise HTTPException(
                     status_code=403,
                     detail=f"Role {user.role} cannot mark a listing as verified.",
                 )
             if normalized_status in {"expired", "cancelled"} and (
-                role != "donor" or listing.donor_user_id != user.id
+                role not in {"donor", "admin"} or (role == "donor" and listing.donor_user_id != user.id)
             ):
                 raise HTTPException(
                     status_code=403,
-                    detail="Only the donor can cancel or expire their listing.",
+                    detail="Only the donor or platform admin can cancel or expire their listing.",
                 )
             changes["status"] = normalized_status
 
@@ -203,7 +211,7 @@ async def update_listing(
             value = value.strip()
         setattr(listing, field, value)
 
-    if listing.status == "accepted" and listing.accepted_ngo_id is None and role == "ngo":
+    if listing.status == "accepted" and listing.accepted_ngo_id is None and role in {"ngo", "admin"}:
         listing.accepted_ngo_id = user.id
 
     await db.commit()
@@ -249,8 +257,8 @@ async def accept_listing(
 ) -> dict:
     """Accept an available listing and open its live rescue session."""
     role = _normalize_role(user.role)
-    if role != "ngo":
-        raise HTTPException(status_code=403, detail="Only NGOs can accept donation listings.")
+    if role not in {"ngo", "admin"}:
+        raise HTTPException(status_code=403, detail="Only NGOs or platform admins can accept donation listings.")
 
     listing = await db.get(FoodListing, listing_id)
     if listing is None:
@@ -310,7 +318,7 @@ async def accept_listing(
                 rescue_session_id=session.id,
                 user_id=user.id,
                 user_name=user.name,
-                role="ngo",
+                role=role,
                 joined_at=now,
                 is_online=True,
             )

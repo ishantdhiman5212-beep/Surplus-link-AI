@@ -137,8 +137,9 @@ async def accept_match(
     user: CurrentUser,
 ) -> dict:
     """Accept a matched NGO and broadcast the donationAccepted event."""
-    if user.role.strip().lower() != "ngo":
-        raise HTTPException(status_code=403, detail="Only NGOs can accept a match.")
+    role = user.role.strip().lower()
+    if role not in {"ngo", "admin"}:
+        raise HTTPException(status_code=403, detail="Only NGOs or platform admins can accept a match.")
 
     session = await db.get(RescueSession, payload.rescue_session_id)
     if session is None:
@@ -171,7 +172,7 @@ async def accept_match(
         join_code=session.join_code,
         status=session.status,
         actor_user_id=user.id,
-        actor_role="ngo",
+        actor_role=role,
         message=(
             f"Recipient NGO {organisation.name} accepted rescue for "
             f'"{listing.title}".'
