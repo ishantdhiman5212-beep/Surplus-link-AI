@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ShieldCheck, CheckCircle2, AlertCircle, ArrowRight, Lock } from 'lucide-react';
 import { useRescue } from '../../context/RescueContext';
 import { useToast } from '../../context/ToastContext';
+import { NGOS } from '../../services/mockData';
 
 interface HandoverDeskProps {
   activeNgoId: string;
@@ -45,16 +46,24 @@ export const HandoverDesk: React.FC<HandoverDeskProps> = ({ activeNgoId }) => {
 
   return (
     <div className="p-6 sm:p-7 rounded-2xl glass-panel border border-line bg-card/80 shadow-glass space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-primary/15 text-primary flex items-center justify-center">
-          <ShieldCheck className="w-5 h-5" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-primary/15 text-primary flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base sm:text-lg text-ink">Handover Verification Desk</h3>
+            <p className="text-xs text-mute">
+              Volunteer arrives with a QR token. Scan or paste the token to confirm custody.
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-bold text-base sm:text-lg text-ink">Handover Verification Desk</h3>
-          <p className="text-xs text-mute">
-            Volunteer arrives with a QR token. Scan or paste the token to confirm custody.
-          </p>
-        </div>
+        {activeNgoId && NGOS[activeNgoId] && (
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-xs font-semibold text-primary shrink-0 self-start sm:self-auto">
+            <span>{NGOS[activeNgoId].avatar || '🏢'}</span>
+            <span>Desk: {NGOS[activeNgoId].name}</span>
+          </div>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4 max-w-md">

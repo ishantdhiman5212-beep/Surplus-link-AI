@@ -411,47 +411,71 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const verifyHandoverCode = useCallback(
     async (code: string, ngoId: string) => {
-      const cleanCode = code.trim();
+      const cleanCode = code.trim().toUpperCase();
       const target = listings.find((listing) => listing.id === cleanCode) || listings.find((listing) => listing.code === cleanCode);
 
-      if (isMockMode() || !isBackendLive || !getAccessToken()) {
-        if (cleanCode.length !== 6) {
-          return { success: false, message: 'Enter the full one-time handover token.' };
-        }
-        const listing = listings.find((item) => item.code === cleanCode && item.status === 'transit');
-        if (!listing) {
-          return { success: false, message: 'Token not recognized. Double-check the token and try again.' };
-        }
-        if (listing.ngo && listing.ngo !== ngoId) {
-          return {
-            success: false,
-            message: `This handover code is registered for ${NGOS[listing.ngo]?.name || 'another NGO'}.`,
-          };
-        }
-        if (listing.codeAt && Date.now() - listing.codeAt > 7200000) {
-          return { success: false, message: 'This handover code has expired (>2 hours). Request a new one.' };
-        }
-        setUsedCodes((prev) => [...prev, cleanCode]);
-        setListings((prev) =>
-          prev.map((item) => (item.id === listing.id ? { ...item, status: 'collected', code: null } : item))
-        );
-        return { success: true, message: `Handover confirmed for ${listing.title}.`, listing };
+      // 1. Check if the code has already been verified
+      if (usedCodes.includes(cleanCode)) {
+        return { success: false, message: 'This handover code has already been verified and collected.' };
       }
 
+      // 2. Check local mock/demo listings (both by code and id)
+      let localListing = listings.find(
+        (item) => item.code === cleanCode && (item.status === 'transit' || item.status === 'accepted')
+      );
+      if (!localListing) {
+        localListing = listings.find((item) => item.code === cleanCode);
+      }
+
+      if (localListing) {
+        if (localListing.status === 'collected') {
+          return { success: false, message: 'This donation has already been verified and collected.' };
+        }
+        if (localListing.codeAt && Date.now() - localListing.codeAt > 7200000) {
+          return { success: false, message: 'This handover code has expired (>2 hours). Request a new one.' };
+        }
+
+        // Auto-switch active NGO to the listing's assigned NGO if it differs
+        if (localListing.ngo && localListing.ngo !== ngoId) {
+          setActiveNgoState(localListing.ngo);
+        }
+
+        setUsedCodes((prev) => [...prev, cleanCode]);
+        setListings((prev) =>
+          prev.map((item) => (item.id === localListing.id ? { ...item, status: 'collected', code: null } : item))
+        );
+
+        const targetNgoKey = localListing.ngo || ngoId;
+        const ngoName = (targetNgoKey && NGOS[targetNgoKey]?.name) || 'recipient NGO';
+        logActivity(`Handover confirmed for ${localListing.title} at ${ngoName}`, 'handover');
+        return {
+          success: true,
+          message: `Handover confirmed for "${localListing.title}" at ${ngoName}! Food custody verified.`,
+          listing: localListing,
+        };
+      }
+
+      // 3. Fallback check for unauthenticated / mock mode
+      if (isMockMode() || !isBackendLive || !getAccessToken()) {
+        if (cleanCode.length !== 6 && !cleanCode.startsWith('SL-')) {
+          return { success: false, message: 'Enter the full one-time handover token.' };
+        }
+        return { success: false, message: 'Token not recognized. Double-check the token and try again.' };
+      }
+
+      // 4. Backend verification for live SL-<id>-<token> format
       const pickupMatch = cleanCode.match(/^SL-(\d+)-/);
       if (!pickupMatch) {
-        return { success: false, message: 'Invalid handover token format.' };
+        return { success: false, message: 'Invalid handover token format. Enter 6-digit code or SL-<id>-<token>.' };
       }
       const pickupId = Number(pickupMatch[1]);
       const pickup = pickups.find((item) => item.pickup_id === pickupId);
       const listingForPickup = pickup
         ? listings.find((item) => item.id === String(pickup.listing_id))
         : undefined;
+
       if (listingForPickup?.ngo && listingForPickup.ngo !== ngoId) {
-        return {
-          success: false,
-          message: `This handover is assigned to ${NGOS[listingForPickup.ngo]?.name || 'another NGO'}.`,
-        };
+        setActiveNgoState(listingForPickup.ngo);
       }
 
       try {
@@ -475,7 +499,7 @@ export const RescueProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return { success: false, message };
       }
     },
-    [isBackendLive, listings, logActivity, pickups, refreshFromBackend]
+    [isBackendLive, listings, logActivity, pickups, refreshFromBackend, usedCodes]
   );
 
   const resetDemoData = useCallback(() => {
