@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #FFF6F0;
+  --ink: #2A1612;
+  --mute: #6B5047;
+  --card: rgba(255, 255, 255, 0.65);
+  --chip: rgba(255, 255, 255, 0.72);
+  --tag: rgba(255, 255, 255, 0.85);
+  --line: rgba(42, 22, 18, 0.10);
+  --line2: rgba(42, 22, 18, 0.24);
+  --hi: rgba(255, 255, 255, 0.9);
+  --shadow: 0 1px 2px rgba(42, 22, 18, 0.05), 0 12px 32px -12px rgba(130, 45, 10, 0.18);
+  --track: rgba(42, 22, 18, 0.08);
+  --primary: #C2410C;
+  --on-primary: #FFFFFF;
+  --primary-soft: rgba(194, 65, 12, 0.12);
+  --panel: #FDEADF;
+  --on-panel: #2A1612;
+  --live: #2FA866;
+  --deep: #3B1530;
+  --on-deep: #FFF1EA;
+  --mute-deep: #D9B4C4;
+  --hi-deep: #FFB84D;
+  --orange: #E39A12;
+  --on-orange: #3B2300;
+  --yellow: #F2C94C;
+  --lime: #8FD19E;
+  --pink: #EE8458;
+  --st-open-bg: #FBEECB;
+  --st-open-fg: #6F4A00;
+  --st-acc-bg: #E0EBFA;
+  --st-acc-fg: #1B4A97;
+  --st-tr-bg: #FCE3D4;
+  --st-tr-fg: #96390C;
+  --st-col-bg: #DBEFE2;
+  --st-col-fg: #14553A;
+  --blob-a: #FFB27A;
+  --blob-b: #F59BC0;
+  --blob-c: #FFD27A;
+  --err: #B3261E;
+}
+
+[data-theme="dark"] {
+  --bg: #170D0B;
+  --ink: #FBEDE8;
+  --mute: #C2A59B;
+  --card: rgba(35, 21, 18, 0.7);
+  --chip: rgba(44, 27, 23, 0.75);
+  --tag: rgba(51, 33, 28, 0.8);
+  --line: rgba(255, 255, 255, 0.10);
+  --line2: rgba(255, 255, 255, 0.22);
+  --hi: rgba(255, 255, 255, 0.12);
+  --shadow: 0 14px 40px -12px rgba(0, 0, 0, 0.75);
+  --track: rgba(255, 255, 255, 0.1);
+  --primary: #FF9A63;
+  --on-primary: #3A1204;
+  --primary-soft: rgba(255, 154, 99, 0.16);
+  --panel: #2E1B16;
+  --on-panel: #FBEDE8;
+  --live: #62CC8F;
+  --deep: #4A1B3F;
+  --on-deep: #FFF1EA;
+  --mute-deep: #D9B4C4;
+  --hi-deep: #FFC266;
+  --st-open-bg: rgba(242, 201, 76, 0.14);
+  --st-open-fg: #F2D27A;
+  --st-acc-bg: rgba(110, 168, 250, 0.15);
+  --st-acc-fg: #9CC1FA;
+  --st-tr-bg: rgba(238, 132, 88, 0.15);
+  --st-tr-fg: #F5A98A;
+  --st-col-bg: rgba(98, 204, 143, 0.15);
+  --st-col-fg: #8EDDAE;
+  --blob-a: #8A2A10;
+  --blob-b: #6B1F4A;
+  --blob-c: #6B4A10;
+  --err: #FF8E80;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: 'Figtree', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Bricolage Grotesque', 'Figtree', sans-serif;
+  }
+}
+
+/* Glass Surface Utilities */
+.glass-panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 var(--hi), var(--shadow);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+.glass-chip {
+  background: var(--chip);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+/* Subtle Shimmer Animation */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-effect::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.18) 20%,
+    rgba(255, 255, 255, 0.35) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer 1.8s infinite;
+}
+
+/* Ticker Marquee */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 35s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Scooter Transit Wheel Rotation */
+@keyframes spinWheel {
+  100% { transform: rotate(360deg); }
+}
+
+.wheel-spin {
+  transform-origin: center;
+  animation: spinWheel 0.8s linear infinite;
+}

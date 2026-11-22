@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: surpluslink-ai-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: PROJECT_NAME
+        value: SurplusLink AI
+      - key: CORS_ORIGINS
+        sync: false
+      - key: CREATE_TABLES_ON_STARTUP
+        value: "false"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+      - key: AI_TIMEOUT_SECONDS
+        value: "8.0"
