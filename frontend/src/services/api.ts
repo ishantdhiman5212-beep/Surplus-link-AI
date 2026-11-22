@@ -12,7 +12,9 @@ import {
   AIProvider,
 } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL !== undefined
+  ? import.meta.env.VITE_API_BASE_URL
+  : (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '');
 const USE_MOCK_DATA = import.meta.env.VITE_USE_MOCK_DATA === 'true';
 const MOCK_DELAY_MS = Number(import.meta.env.VITE_MOCK_DELAY_MS) || 500;
 const ACCESS_TOKEN_KEY = 'surpluslink_access_token_v1';
@@ -301,14 +303,22 @@ export function connectDonationStream(
   onEvent: (event: BackendStreamEvent) => void
 ): () => void {
   if (USE_MOCK_DATA || !token) return () => undefined;
-  const wsBase = API_BASE_URL.replace(/^http/, 'ws');
-  const socket = new WebSocket(`${wsBase}/ws/donations?token=${encodeURIComponent(token)}`);
-  socket.onmessage = (message) => {
-    try {
-      onEvent(JSON.parse(message.data) as BackendStreamEvent);
-    } catch (error) {
-      console.warn('[SurplusLink WS] Invalid event payload', error);
-    }
-  };
-  return () => socket.close();
+  const wsBase = API_BASE_URL
+    ? API_BASE_URL.replace(/^http/, 'ws')
+    : (typeof window !== 'undefined' ? window.location.origin.replace(/^http/, 'ws') : '');
+  if (!wsBase) return () => undefined;
+  try {
+    const socket = new WebSocket(`${wsBase}/ws/donations?token=${encodeURIComponent(token)}`);
+    socket.onmessage = (message) => {
+      try {
+        onEvent(JSON.parse(message.data) as BackendStreamEvent);
+      } catch (error) {
+        console.warn('[SurplusLink WS] Invalid event payload', error);
+      }
+    };
+    return () => socket.close();
+  } catch (err) {
+    console.warn('[SurplusLink WS] WebSocket connection error', err);
+    return () => undefined;
+  }
 }

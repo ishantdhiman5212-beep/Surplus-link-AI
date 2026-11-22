@@ -1,0 +1,45 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "surpluslink-ai-api": {
+      "root": "backend",
+      "framework": "fastapi"
+    },
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "surpluslink-ai-api"
+      }
+    },
+    {
+      "source": "/health",
+      "destination": {
+        "service": "surpluslink-ai-api"
+      }
+    },
+    {
+      "source": "/docs",
+      "destination": {
+        "service": "surpluslink-ai-api"
+      }
+    },
+    {
+      "source": "/openapi.json",
+      "destination": {
+        "service": "surpluslink-ai-api"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "frontend"
+      }
+    }
+  ]
+}
