@@ -1,3 +1,9 @@
+databases:
+  - name: surpluslink-db
+    databaseName: surplus_link_ai
+    user: surpluslink
+    plan: free
+
 services:
   - type: web
     name: surpluslink-ai-api
@@ -9,7 +15,9 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: surpluslink-db
+          property: connectionString
       - key: JWT_SECRET
         generateValue: true
       - key: ENVIRONMENT
@@ -17,7 +25,7 @@ services:
       - key: PROJECT_NAME
         value: SurplusLink AI
       - key: CORS_ORIGINS
-        sync: false
+        value: "http://localhost:3000,http://127.0.0.1:3000,https://surplus-link-ai.vercel.app"
       - key: CREATE_TABLES_ON_STARTUP
         value: "false"
       - key: GEMINI_API_KEY
